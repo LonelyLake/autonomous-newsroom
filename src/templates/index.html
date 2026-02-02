@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous Newsroom</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header class="header">
+            <h1>🗞️ Autonomous Newsroom</h1>
+            <p class="subtitle">AI-powered article generation pipeline</p>
+        </header>
+
+        <!-- PANEL GŁÓWNY -->
+        <main class="main-grid">
+            <!-- LEWA KOLUMNA: Formularz -->
+            <section class="panel input-panel">
+                <h2>📝 Nowe zlecenie</h2>
+                
+                <form id="topic-form">
+                    <div class="form-group">
+                        <label for="topic">Temat artykułu:</label>
+                        <textarea 
+                            id="topic" 
+                            name="topic" 
+                            rows="3" 
+                            placeholder="np. Wpływ AI na rynek pracy w Polsce 2026"
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="iterations">Max iteracji:</label>
+                        <select id="iterations" name="iterations">
+                            <option value="1">1 (szybko)</option>
+                            <option value="2" selected>2 (zalecane)</option>
+                            <option value="3">3 (dokładnie)</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" id="submit-btn" class="btn btn-primary">
+                        <span class="btn-text">🚀 Uruchom agentów</span>
+                        <span class="btn-loading hidden">⏳ Przetwarzanie...</span>
+                    </button>
+                </form>
+
+                <!-- Status -->
+                <div id="status-box" class="status-box hidden">
+                    <div class="status-header">
+                        <span id="status-icon">⏳</span>
+                        <span id="status-text">Inicjalizacja...</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="progress" class="progress"></div>
+                    </div>
+                    <div id="current-step" class="current-step"></div>
+                </div>
+            </section>
+
+            <!-- ŚRODKOWA KOLUMNA: Logi na żywo -->
+            <section class="panel logs-panel">
+                <div class="panel-header">
+                    <h2>📋 Logi na żywo</h2>
+                    <button id="clear-logs-btn" class="btn btn-small">Wyczyść</button>
+                </div>
+                <div id="logs-container" class="logs-container">
+                    <div class="log-placeholder">
+                        Logi pojawią się tutaj po uruchomieniu agentów...
+                    </div>
+                </div>
+            </section>
+
+            <!-- PRAWA KOLUMNA: Wynik -->
+            <section class="panel result-panel">
+                <h2>📰 Wygenerowany artykuł</h2>
+                <div id="result-container" class="result-container">
+                    <div class="result-placeholder">
+                        Artykuł pojawi się tutaj po zakończeniu pracy agentów...
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- STOPKA -->
+        <footer class="footer">
+            <div class="footer-stats">
+                <span id="api-status" class="api-status">
+                    <span class="status-dot"></span>
+                    API: Sprawdzanie...
+                </span>
+                <span class="separator">|</span>
+                <span>Model: GPT-4o-mini</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

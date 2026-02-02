@@ -1,80 +1,201 @@
 # Justfile dla projektu Autonomous Newsroom
-set shell := ["zsh", "-c"]
+# Kompatybilny z Windows (PowerShell) i Linux/Mac (sh)
 
-# Definicje kolorów przy użyciu printf dla kompatybilności z just
-green  := `printf "\033[0;32m"`
-red    := `printf "\033[0;31m"`
-yellow := `printf "\033[0;33m"`
-reset  := `printf "\033[0m"`
+# Wykryj system - użyj PowerShell na Windows, sh na Linux/Mac
+set windows-shell := ["powershell", "-NoLogo", "-Command"]
+set shell := ["sh", "-c"]
 
 # Domyślne: lista dostępnych komend
 default:
     @just --list
 
-# --- INSTALACJA I KONFIGURACJA ---
+# =============================================================================
+# INSTALACJA I KONFIGURACJA
+# =============================================================================
 
 # Inicjalizacja projektu i venv przez uv
 setup:
-    @echo "{{green}}Instalowanie środowiska...{{reset}}"
     uv sync
-    @if [ ! -f .env ]; then \
-        if [ -f .env.example ]; then \
-            cp .env.example .env && echo "{{yellow}}Utworzono .env z .env.example{{reset}}"; \
-        else \
-            touch .env && echo "{{yellow}}Utworzono pusty plik .env{{reset}}"; \
-        fi \
-    fi
+    @echo "Srodowisko zainstalowane."
 
-# --- ROZWÓJ I JAKOŚĆ KODU ---
+# =============================================================================
+# ROZWÓJ I URUCHAMIANIE
+# =============================================================================
 
 # Startowanie serwera Newsroom (Uvicorn)
 run:
-    @echo "{{green}}Startowanie serwera Newsroom...{{reset}}"
     uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
-# Pełny linting: Ruff + MyPy
+# Uruchomienie serwera w tle (Windows)
+[windows]
+run-bg:
+    Start-Process -NoNewWindow -FilePath "uv" -ArgumentList "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"
+
+# =============================================================================
+# TESTOWANIE AGENTÓW
+# =============================================================================
+
+# Test Research Agent
+test-research:
+    uv run python -m src.agents.research_agent
+
+# Test Writer Agent (Research → Writer)
+test-writer:
+    uv run python -m src.agents.writer_agent
+
+# Test Editor Agent (pełny pipeline)
+test-editor:
+    uv run python -m src.agents.editor_agent
+
+# Test LLM Client
+test-llm:
+    uv run python -m src.llm_client
+
+# Test ładowania promptów
+test-prompts:
+    uv run python -m src.core.prompt_loader
+
+# Test Orchestratora (pełna pętla z feedback)
+test-orchestrator:
+    uv run python -m src.core.orchestrator
+
+# =============================================================================
+# LOGI
+# =============================================================================
+
+# Pokaż ostatnie 30 linii logów
+[windows]
+logs:
+    Get-Content logs/newsroom.log -Tail 30 -Encoding UTF8
+
+[unix]
+logs:
+    tail -n 30 logs/newsroom.log
+
+# Pokaż wszystkie logi
+[windows]
+logs-all:
+    Get-Content logs/newsroom.log -Encoding UTF8
+
+[unix]
+logs-all:
+    cat logs/newsroom.log
+
+# Śledź logi na żywo (live)
+[windows]
+logs-follow:
+    Get-Content logs/newsroom.log -Wait -Tail 20 -Encoding UTF8
+
+[unix]
+logs-follow:
+    tail -f logs/newsroom.log
+
+# Wyczyść logi
+[windows]
+logs-clear:
+    Remove-Item logs/newsroom.log -ErrorAction SilentlyContinue; New-Item logs/newsroom.log -ItemType File | Out-Null; Write-Host "Logi wyczyszczone."
+
+[unix]
+logs-clear:
+    > logs/newsroom.log && echo "Logi wyczyszczone."
+
+# =============================================================================
+# TESTY PYTEST
+# =============================================================================
+
+# Uruchom wszystkie testy
+test:
+    uv run pytest -v
+
+# Uruchom testy z pokryciem kodu
+test-cov:
+    uv run pytest --cov=src --cov-report=term-missing -v
+
+# Uruchom tylko testy schematów
+test-schemas:
+    uv run pytest tests/test_schemas.py -v
+
+# Uruchom tylko testy API
+test-api:
+    uv run pytest tests/test_api.py -v
+
+# Uruchom tylko testy agentów
+test-agents:
+    uv run pytest tests/test_agents.py -v
+
+# =============================================================================
+# JAKOŚĆ KODU
+# =============================================================================
+
+# Pełny linting: Ruff
 lint:
-    @echo "{{green}}Formatowanie i sprawdzanie kodu (Ruff)...{{reset}}"
     uv run ruff check --fix .
     uv run ruff format .
-    @echo "{{green}}Sprawdzanie typów (MyPy)...{{reset}}"
-    uv run mypy .
 
-# Uruchamianie testów
-test:
-    @echo "{{green}}Uruchamianie testów z pytest...{{reset}}"
-    uv run pytest tests/ -v
+# =============================================================================
+# TESTY API (curl/Invoke-RestMethod)
+# =============================================================================
 
-# --- DOCKER I DEPLOYMENT ---
+# Wyślij testowe zlecenie do API
+[windows]
+api-test topic="AI w dziennikarstwie":
+    Invoke-RestMethod -Uri "http://127.0.0.1:8000/start-cycle" -Method POST -ContentType "application/json" -Body ('{"topic": "' + '{{topic}}' + '", "max_iterations": 2}') | ConvertTo-Json
+
+[unix]
+api-test topic="AI w dziennikarstwie":
+    curl -X POST "http://127.0.0.1:8000/start-cycle" -H "Content-Type: application/json" -d '{"topic": "{{topic}}", "max_iterations": 2}'
+
+# Pobierz logi przez API
+[windows]
+api-logs:
+    Invoke-RestMethod -Uri "http://127.0.0.1:8000/logs?lines=50"
+
+[unix]
+api-logs:
+    curl "http://127.0.0.1:8000/logs?lines=50"
+
+# Sprawdź health
+[windows]
+api-health:
+    Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" | ConvertTo-Json
+
+[unix]
+api-health:
+    curl "http://127.0.0.1:8000/health"
+
+# =============================================================================
+# DOCKER
+# =============================================================================
 
 # Budowanie obrazu kontenera
 docker-build:
-    @echo "{{green}}Budowanie obrazu Docker...{{reset}}"
     docker build -t newsroom-app:latest .
 
-# Uruchomienie kontenera lokalnie (z limitami RAM dla 8GB hosta)
-docker-run:
-    @echo "{{yellow}}Uruchamianie kontenera (limit 1GB RAM)...{{reset}}"
-    docker run --rm -p 8000:8000 --memory="1g" --name newsroom-container newsroom-app:latest
+# Uruchomienie przez Docker Compose
+docker-up:
+    docker compose up -d
 
-# --- SPRZĄTANIE I KONSERWACJA ---
+# Zatrzymanie Docker Compose
+docker-down:
+    docker compose down
+
+# Logi z Dockera
+docker-logs:
+    docker compose logs -f newsroom-api
+
+# =============================================================================
+# SPRZĄTANIE
+# =============================================================================
 
 # Usuwanie wszystkich śmieci (cache, venv, temporary files)
+[windows]
 clean:
-    @echo "{{red}}Czyszczenie cache i plików tymczasowych...{{reset}}"
-    rm -rf .venv
-    rm -rf .pytest_cache
-    rm -rf .ruff_cache
-    rm -rf .mypy_cache
-    rm -rf .coverage
-    rm -rf htmlcov
-    rm -rf dist
-    rm -rf build
-    find . -type d -name "__pycache__" -exec rm -rf {} +
-    @echo "{{green}}Sprzątanie zakończone.{{reset}}"
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .venv, .pytest_cache, .ruff_cache, .mypy_cache, .coverage, htmlcov, dist, build
+    Get-ChildItem -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -Force
+    Write-Host "Sprzatanie zakonczone."
 
-# --- WERYFIKACJA ---
-
-# Pełna weryfikacja: od czystego stanu do gotowego obrazu
-verify: clean setup lint test docker-build
-    @echo "{{green}}Weryfikacja zakończona sukcesem! System gotowy do prezentacji.{{reset}}"
+[unix]
+clean:
+    rm -rf .venv .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov dist build
+    find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+    echo "Sprzątanie zakończone."
