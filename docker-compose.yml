@@ -1,0 +1,15 @@
+services:
+  newsroom-api:
+    build: .
+    container_name: autonomous-newsroom-core
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    command: uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    # W przyszłości będzie tu też serwis 'db' (PostgreSQL) i 'redis'
