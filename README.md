@@ -43,7 +43,7 @@ System wieloagentowy wykorzystujący LLM (GPT-4o-mini via GitHub Models) do auto
 │                                         APPROVE│REJECT              │
 │                                                ▼                    │
 │                                   ┌────────────────────┐            │
-│                                   │   📰 Final Article │            │
+│                                   │  📰 Final Article  │            │
 │                                   └────────────────────┘            │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
